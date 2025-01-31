@@ -2,7 +2,7 @@
 .idea
 .vscode
 
-# CMake
+# global
 test262
 includes
 lib
@@ -10,3 +10,4 @@ js_cmp
 package-lock.json
 TODO.todo
 node_modules
+es5tests.js
