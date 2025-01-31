@@ -3,22 +3,10 @@
 .vscode
 
 # CMake
-cmake_install.cmake
-cmake-build-debug
-.cmake
-CMakeCache.txt
-CMakeFiles
-JS_CMP
+test262
+includes
+lib
 js_cmp
-Makefile
-*.out
-*.js
-*.js.cpp
-*.a
-
-# Doxygen
-doxygen.log
-html
-
-# Build
-bin
+package-lock.json
+TODO.todo
+node_modules
