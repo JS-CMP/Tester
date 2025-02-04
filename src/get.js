@@ -6,11 +6,11 @@ import { featuresEdition, SpecEdition } from './edition.js';
 export function getJsFiles(dirPath) {
     const files = [];
     const stack = [dirPath];
-  
+
     while (stack.length > 0) {
         const currentDir = stack.pop();
         const entries = fs.readdirSync(currentDir, { withFileTypes: true });
-    
+
         for (const entry of entries) {
             const fullPath = path.join(currentDir, entry.name);
             if (entry.isDirectory()) {
@@ -39,7 +39,7 @@ export function getES5tests(path) {
     let num = 0;
     const tests = getJsFiles(path);
     const testES5 = [];
-    
+
     console.log("Total tests: ", tests.length);
     for (const testPath of tests) {
         const metadata = getMetadata(testPath);
@@ -75,7 +75,7 @@ export function getES5tests(path) {
     return testES5;
 }
 
-export async function getTests(prog, options) {    
+export async function getTests(prog, options) {
     if (!fs.existsSync("./es5tests.js") || options.e) {
         let es5Tests = getES5tests(prog.args[0]);
         saveTests(es5Tests, "./es5tests.js");

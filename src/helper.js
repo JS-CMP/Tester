@@ -32,7 +32,7 @@ export function saveTests(tests, fileName) {
     let content = "export const tests = [\n";
     content += tests.map(test => `    "${test}",\n`).join('');
     content += "];\n";
-    
+
     fs.writeFileSync(fileName, content);
 
     console.log("Tests saved in ", fileName);

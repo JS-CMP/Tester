@@ -40,17 +40,17 @@ async function runJsCmpTests(tests) {
             }));
             cluster = []
         }
-    }    
+    }
 }
 
 function parseArgs() {
     program
         .option('-n, --node', 'Only run Node tests')
-        .option('-j, --jscmp', 'Only run JsCmp tests') 
+        .option('-j, --jscmp', 'Only run JsCmp tests')
         .option('--jscmp-path <path>', 'Path to JsCmp executable', "./js_cmp")
         .option('-e', 'Recheck on the edition of tests even if es5tests.js exists', false)
         .argument('[path]', 'Path to directory or file to run tests on', "./test262");
-    
+
     program.parse(process.argv);
     return program;
 }
