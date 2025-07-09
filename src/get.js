@@ -76,14 +76,14 @@ export function getES5tests(path) {
 }
 
 export async function getTests(prog, options) {
-    if (!fs.existsSync("./es5tests.js") || options.e) {
-        let es5Tests = getES5tests(prog.args[0]);
-        saveTests(es5Tests, "./es5tests.js");
-        console.log("Total ES5 tests: ", es5Tests.length);
-        return es5Tests;
-    }
+    // if (!fs.existsSync("./es5tests.js") || options.e) {
+    let es5Tests = getES5tests(prog.args[0]);
+    saveTests(es5Tests, "./es5tests.js");
+    console.log("Total ES5 tests: ", es5Tests.length);
+    return es5Tests;
+    // }
 
-    let f = await import("./es5tests.js");
-    console.log("Total ES5 tests: ", f.tests.length);
-    return f.tests;
+    // let f = await import("./es5tests.js");
+    // console.log("Total ES5 tests: ", f.tests.length);
+    // return f.tests;
 }
