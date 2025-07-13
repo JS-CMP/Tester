@@ -3,7 +3,12 @@ import { execSync } from 'child_process';
 import { getTests } from './get.js';
 import { execCmd, runCommand } from './helper.js';
 import os from 'os';
+import path from 'path';
 import { program } from 'commander';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function runNodeTests(tests) {
     console.log("Node tests");
@@ -14,7 +19,36 @@ function runNodeTests(tests) {
     execSync(command, { stdio: 'inherit' });
 }
 
-async function runJsCmpTests(tests) {
+async function createMergedTempTest(testPath) {
+    const harnessContent = fs.readFileSync(path.resolve(__dirname, 'harness.js'), 'utf8');
+    const testContent = fs.readFileSync(testPath, 'utf8');
+    const mergedContent = `${harnessContent}\n${testContent}`;
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'test-'));
+    const tempFilePath = path.join(tempDir, path.basename(testPath));
+    fs.writeFileSync(tempFilePath, mergedContent, 'utf8');
+    return tempFilePath;
+}
+
+function handleTestFailure({ 
+    errorType, 
+    shouldStop, 
+    error, 
+    tests_infos, 
+    failedTestPath, 
+    stopMessage 
+}) {
+    if (shouldStop && error.message === errorType) {
+        fs.copyFileSync(tests_infos[0], failedTestPath);
+        console.error("  >", `./js_cmp ${failedTestPath} -o ${failedTestPath.replace('.js', '.out')}`);
+        if (errorType !== "lexing") {
+            console.error("  >", `${failedTestPath.replace('.js', '.out')}`);
+        }
+        console.error(stopMessage);
+        process.exit(1);
+    }
+}
+
+async function runJsCmpTests(tests, stopOnLexerCrash, stopOnTestCrash, stopOnTestFail) {
     let totalTests = tests.length;
     let passedTests = 0;
     const harness = "./js_cmp";
@@ -23,19 +57,48 @@ async function runJsCmpTests(tests) {
 
     let cluster = []
     for (const test of tests) {
-        cluster.push(test);
+        const mergedTestPath = await createMergedTempTest(test);
+        cluster.push([mergedTestPath, test]);
         if (cluster.length === os.cpus().length) {
-            await Promise.all(cluster.map(async function(test) {
+            await Promise.all(cluster.map(async function(tests_infos) {
                 try {
-                    await runCommand(`${harness} ${test} -o ${test.replace('.js', '.out')}`, "compilation");
-                    await runCommand(`./${test.replace('.js', '.out')}`, "run");
+                    await runCommand(`${harness} ${tests_infos[0]} -o ${tests_infos[0].replace('.js', '.out')}`, "compilation");
+                    await runCommand(`./${tests_infos[0].replace('.js', '.out')}`, "run");
                     passedTests++;
-                    console.log(`PASSED: ${test}`);
+                    console.log(`PASSED: ${tests_infos[1]}`);
                 } catch (error) {
                     if (!error.message) {
-                        error.message = "lexing"
+                        error.message = "lexing";
+                        console.error(`FAILED: ${error.message} of ${tests_infos[1]} with signal ${error["error"]["signal"]}`);
+                    } else {
+                        console.error(`FAILED: ${error.message} of ${tests_infos[1]}`);
                     }
-                    console.log(`FAILED: ${error.message} of ${test}`);
+
+                    let failedTestPath = `./failed_tests/failed_${path.basename(tests_infos[1])}`
+                    handleTestFailure({
+                        errorType: "compilation",
+                        shouldStop: stopOnTestCrash,
+                        error,
+                        tests_infos,
+                        failedTestPath,
+                        stopMessage: "Stopping due to test crash"
+                    });
+                    handleTestFailure({
+                        errorType: "run",
+                        shouldStop: stopOnTestFail,
+                        error,
+                        tests_infos,
+                        failedTestPath,
+                        stopMessage: "Stopping due to test failure"
+                    });
+                    handleTestFailure({
+                        errorType: "lexing",
+                        shouldStop: stopOnLexerCrash,
+                        error,
+                        tests_infos,
+                        failedTestPath,
+                        stopMessage: "Stopping due to lexer crash"
+                    });
                 }
             }));
             cluster = []
@@ -49,6 +112,9 @@ function parseArgs() {
         .option('-j, --jscmp', 'Only run JsCmp tests')
         .option('--jscmp-path <path>', 'Path to JsCmp executable', "./js_cmp")
         .option('-e', 'Recheck on the edition of tests even if es5tests.js exists', false)
+        .option('--stop-on-lexer-crash', 'If a crash occurs while testing, stop the runner, only work for JSCMP', false)
+        .option('--stop-on-test-crash', 'If a test crash, stop the runner, only work for JSCMP', false)
+        .option('--stop-on-test-fail', 'If a test fails, stop the runner, only work for JSCMP', false)
         .argument('[path]', 'Path to directory or file to run tests on', "./test262");
 
     program.parse(process.argv);
@@ -92,7 +158,7 @@ async function main() {
         runNodeTests(es5tests);
     }
     if (!options.node) {
-        await runJsCmpTests(es5tests);
+        await runJsCmpTests(es5tests, options.stopOnLexerCrash, options.stopOnTestCrash, options.stopOnTestFail);
     }
 }
 main();

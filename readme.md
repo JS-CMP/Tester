@@ -35,12 +35,17 @@ Or directly:
 node src/main.js [options] [path]
 ```
 
+You can also put JS code in the harness file in the `src` directory, which will be compiled and run with each test.
+
 ### Options
 
 - `-n, --node` &nbsp;&nbsp;&nbsp;&nbsp;Run only Node.js tests
 - `-j, --jscmp` &nbsp;&nbsp;&nbsp;&nbsp;Run only JsCmp tests
 - `--jscmp-path <path>` &nbsp;&nbsp;&nbsp;&nbsp;Path to JsCmp executable (default: `./js_cmp`)
 - `-e` &nbsp;&nbsp;&nbsp;&nbsp;Recheck test edition even if `es5tests.js` exists
+- `--stop-on-lexer-crash` &nbsp;&nbsp;&nbsp;&nbsp;If a crash occurs while testing, stop the runner and save the temp file to the failed_tests folder, only work for JSCMP
+- `--stop-on-test-crash` &nbsp;&nbsp;&nbsp;&nbsp;If a test crash, stop the runner and save the temp file to the failed_tests folder, only work for JSCMP
+- `--stop-on-test-fail` &nbsp;&nbsp;&nbsp;&nbsp;If a test fails, stop the runner and save the temp file to the failed_tests folder, only work for JSCMP
 
 ### Arguments
 

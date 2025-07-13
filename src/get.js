@@ -56,6 +56,9 @@ export function getES5tests(path) {
             testES5.push(testPath);
             continue;
         }
+        if (JSON.stringify(metadata).match(/es.*id/)) {
+            continue;
+        }
         if ("features" in metadata) {
             const editionList = metadata.features.map(feature => featuresEdition[feature]);
             const hasOtherThan5 = editionList.some(num => num !== 5);
@@ -65,7 +68,7 @@ export function getES5tests(path) {
         }
         if ("esid" in metadata) {
             const edition = SpecEdition[metadata.esid];
-            if (edition !== 5) {
+            if (!edition || edition !== 5) {
                 continue;
             }
         }
