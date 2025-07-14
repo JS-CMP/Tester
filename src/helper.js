@@ -9,6 +9,9 @@ export function parseMetadata(metadata) {
         const [key, ...valueParts] = line.split(':');
         const value = valueParts.join(':').trim();
         if (key && value) {
+            if (!value) {
+                value = "";
+            }
             if (!isNaN(value)) {
                 jsonObject[key.trim()] = Number(value);
                 continue;
@@ -54,8 +57,22 @@ export async function execCmd(cmd) {
     });
 }
 
+function timeout(ms) {
+    return new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout")), ms)
+    );
+}
+
+async function withTimeout(promise, ms) {
+    return Promise.race([
+        promise,
+        timeout(ms)
+    ]);
+}
+
 export async function runCommand(command, err) {
-    let commandResult = await execCmd(command);
-    if (commandResult["stderr"])
+    let commandResult = await  withTimeout(execCmd(command), 10000);
+    if (commandResult["stderr"]) {
         throw new Error(err);
+    }
 }
