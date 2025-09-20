@@ -76,8 +76,16 @@ async function runJsCmpTests(tests, stopOnLexerCrash, stopOnTestCrash, stopOnTes
                         return;
                     }
                     if (!error.message) {
-                        error.message = "lexing";
-                        console.error(`FAILED: ${error.message} of ${tests_infos[1]} with signal ${error["error"]["signal"]}`);
+                        if (error["error"]["signal"] === "SIGABRT") {
+                            error.message = "run";
+                            console.error(`FAILED: ${tests_infos[1]}`);
+                        } else if (error["error"]["signal"] === "SIGSEGV") {
+                            error.message = "run";
+                            console.error(`FAILED: crash of ${tests_infos[1]} with signal ${error["error"]["signal"]}`);
+                        } else {
+                            error.message = "lexing";
+                            console.error(`FAILED: ${error.message} of ${tests_infos[1]} with signal ${error["error"]["signal"]}`);
+                        }
                     } else {
                         console.error(`FAILED: ${error.message} of ${tests_infos[1]}`);
                     }
@@ -85,7 +93,7 @@ async function runJsCmpTests(tests, stopOnLexerCrash, stopOnTestCrash, stopOnTes
                     let failedTestPath = `./failed_tests/failed_${path.basename(tests_infos[1])}`
                     handleTestFailure({
                         jscmpPath,
-                        errorType: "compilation",
+                        errorType: "crash",
                         shouldStop: stopOnTestCrash,
                         error,
                         tests_infos,
@@ -104,6 +112,15 @@ async function runJsCmpTests(tests, stopOnLexerCrash, stopOnTestCrash, stopOnTes
                     handleTestFailure({
                         jscmpPath,
                         errorType: "lexing",
+                        shouldStop: stopOnLexerCrash,
+                        error,
+                        tests_infos,
+                        failedTestPath,
+                        stopMessage: "Stopping due to lexer crash"
+                    });
+                    handleTestFailure({
+                        jscmpPath,
+                        errorType: "compilation",
                         shouldStop: stopOnLexerCrash,
                         error,
                         tests_infos,

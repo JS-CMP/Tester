@@ -13,3 +13,7 @@ Test262Error.thrower = function (message) {
 function $DONOTEVALUATE() {
   throw "Test262: This statement should not be evaluated.";
 }
+
+function ERROR(message) {
+  throw new Error(message);
+}
