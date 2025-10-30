@@ -47,7 +47,7 @@ export function getES5tests(path) {
             continue;
         }
         if ("flags" in metadata) {
-            if (metadata.flags.includes("noStrict")) {
+            if (metadata.flags?.includes?.("noStrict")) {
                 continue;
             }
         }

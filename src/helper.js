@@ -5,10 +5,11 @@ export function parseMetadata(metadata) {
     const lines = metadata.trim().split('\n');
     const jsonObject = {};
 
-    for (const line of lines) {
+    for (var i = 0; i < lines.length; i++) {
+        let line = lines[i].trim();
         const [key, ...valueParts] = line.split(':');
-        const value = valueParts.join(':').trim();
-        if (key && value) {
+        let value = valueParts.join(':').trim();
+        if (key && value !== undefined) {
             if (!value) {
                 value = "";
             }
@@ -22,6 +23,15 @@ export function parseMetadata(metadata) {
             }
             if (value.startsWith('[') && value.endsWith(']')) {
                 jsonObject[key.trim()] = value.slice(1, -1).split(',').map(v => v.trim());
+                continue;
+            }
+            if (value.startsWith('>') || value.startsWith('|')) {
+                let multiLineValue = "";
+                while (i + 1 < lines.length && lines[i + 1].startsWith(' ')) {
+                    multiLineValue += lines[i + 1].trim() + ' ';
+                    i++;
+                }
+                jsonObject[key.trim()] = multiLineValue;
                 continue;
             }
             jsonObject[key.trim()] = value;
@@ -45,11 +55,23 @@ export function checkEval(content) {
     return content.includes('eval(');
 }
 
-export async function execCmd(cmd) {
+export async function execCmd(cmd, msTimeout = 0) {
     return new Promise((resolve, reject) => {
-        exec(cmd, (error, stdout, stderr) => {
+        const options = {};
+        if (msTimeout > 0) {
+            options.timeout = msTimeout;
+            options.killSignal = 'SIGKILL';
+        }
+        options.maxBuffer = 10 * 1024 * 1024;
+
+        exec(cmd, options, (error, stdout, stderr) => {
             if (error) {
-                reject({ error, stdout, stderr });
+                const timedOut = !!error.killed || (error.signal && (error.signal === 'SIGTERM' || error.signal === 'SIGKILL'));
+                if (timedOut) {
+                    reject({ error: new Error('Command timed out'), stdout, stderr, timedOut: true });
+                    return;
+                }
+                reject({ error, stdout, stderr, timedOut: false });
             } else {
                 resolve({ stdout, stderr });
             }
@@ -57,22 +79,21 @@ export async function execCmd(cmd) {
     });
 }
 
-function timeout(ms) {
-    return new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout")), ms)
-    );
-}
-
-async function withTimeout(promise, ms) {
-    return Promise.race([
-        promise,
-        timeout(ms)
-    ]);
-}
 
 export async function runCommand(command, err) {
-    let commandResult = await  withTimeout(execCmd(command), 10000);
-    if (commandResult["stderr"]) {
-        throw new Error(err);
+    try {
+        const commandResult = await execCmd(command, 10000); // 10s timeout
+        if (commandResult && commandResult.stderr) {
+            throw new Error(err);
+        }
+        return commandResult;
+    } catch (e) {
+        if (e && e.timedOut) {
+            throw new Error('Timeout');
+        }
+        if (e && e.error) {
+            throw e.error;
+        }
+        throw e;
     }
 }
